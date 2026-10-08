@@ -4,6 +4,7 @@ namespace Onetoweb\TrackPod;
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\RequestOptions;
+use Onetoweb\TrackPod\Config\Method;
 use DateTimeInterface;
 use DateTime;
 
@@ -15,40 +16,33 @@ use DateTime;
  */
 class Client
 {
-    const BASE_URI = 'https://api.track-pod.com';
-    
-    /**
-     * Methods.
-     */
-    const METHOD_GET = 'GET';
-    const METHOD_POST = 'POST';
-    const METHOD_PUT = 'PUT';
-    const METHOD_DELETE = 'DELETE';
-    
     /**
      * @var string
      */
-    private $apiKey;
+    public const BASE_URI = 'https://api.track-pod.com';
     
     /**
-     * @var callable
+     * @var Closure
      */
-    private $rateLimitCallback;
+    private ?Closure $rateLimitCallback = null;
     
     /**
      * @param string $apiKey
      */
-    public function __construct(string $apiKey)
-    {
-        $this->apiKey = $apiKey;
+    public function __construct(
+        
+        #[\SensitiveParameter]
+        private string $apiKey
+    ) {
+        
     }
     
     /**
-     * @param callable $rateLimitCallback
+     * @param Closure $rateLimitCallback
      * 
      * @return void
      */
-    public function setRateLimitCallback(callable $rateLimitCallback): void
+    public function setRateLimitCallback(Closure $rateLimitCallback): void
     {
         $this->rateLimitCallback = $rateLimitCallback;
     }
@@ -59,9 +53,9 @@ class Client
      * 
      * @return mixed
      */
-    public function get(string $endpoint, array $query = [])
+    public function get(string $endpoint, array $query = []): mixed
     {
-        return $this->request(self::METHOD_GET, $endpoint, $query);
+        return $this->request(Method::GET, $endpoint, $query);
     }
     
     /**
@@ -70,9 +64,9 @@ class Client
      * 
      * @return mixed
      */
-    public function post(string $endpoint, array $data = [])
+    public function post(string $endpoint, array $data = []): mixed
     {
-        return $this->request(self::METHOD_POST, $endpoint, [], $data);
+        return $this->request(Method::POST, $endpoint, [], $data);
     }
     
     /**
@@ -81,9 +75,9 @@ class Client
      * 
      * @return mixed
      */
-    public function put(string $endpoint, array $data = [])
+    public function put(string $endpoint, array $data = []): mixed
     {
-        return $this->request(self::METHOD_PUT, $endpoint, [], $data);
+        return $this->request(Method::PUT, $endpoint, [], $data);
     }
     
     /**
@@ -91,20 +85,20 @@ class Client
      * 
      * @return mixed
      */
-    public function delete(string $endpoint)
+    public function delete(string $endpoint): mixed
     {
-        return $this->request(self::METHOD_DELETE, $endpoint);
+        return $this->request(Method::DELETE, $endpoint);
     }
     
     /**
-     * @param string $method
+     * @param Method $method
      * @param string $endpoint
      * @param array $query = []
      * @param array $data = []
-     *
+     * 
      * @return mixed
      */
-    public function request(string $method, string $endpoint, array $query = [], array $data = [])
+    public function request(Method $method, string $endpoint, array $query = [], array $data = []): mixed
     {
         // setup client
         $client = new GuzzleClient([
@@ -121,12 +115,12 @@ class Client
             RequestOptions::QUERY => $query
         ];
         
-        if (in_array($method, [self::METHOD_POST, self::METHOD_PUT]) and count($data) > 0) {
+        if (in_array($method, [Method::POST, Method::PUT]) and count($data) > 0) {
             $options[RequestOptions::JSON] = $data;
         }
         
         // do request
-        $response = $client->request($method, $endpoint, $options);
+        $response = $client->request($method->value, $endpoint, $options);
         
         // rate limit callback
         if ($this->rateLimitCallback) {
